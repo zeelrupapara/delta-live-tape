@@ -2,40 +2,39 @@ Built for SWTS — Tick #847
 
 # Delta Live Tape
 
-A small full-stack app that streams live market data from
-[Delta Exchange](https://www.delta.exchange/) and renders it in the browser
-in real time.
+A small full-stack app that shows live market data from
+[Delta Exchange](https://www.delta.exchange/) in the browser as it happens.
 
-- **Backend**: FastAPI + `python-socketio`. One ingestor connects to Delta
-  over WebSocket, keeps an in-memory L2 book, a trade buffer and a rolling
-  VWAP, and fans the feed out to browser clients over Socket.IO.
+- **Backend**: FastAPI + `python-socketio`. The backend opens a WebSocket
+  to Delta, keeps the order book, recent trades and a 1-minute VWAP in
+  memory, and sends updates to the browser over Socket.IO.
 - **Frontend**: Next.js 14 (App Router) + TypeScript + `lightweight-charts`.
-  Live candles (1m), L2 ladder, rolling trade tape, plus four live metrics:
-  last price, % change, bid–ask spread, 1-min VWAP.
+  Live 1-minute candles, an order book ladder, a trade tape, and four
+  live numbers: last price, % change, bid–ask spread, 1-minute VWAP.
 
-The instrument selector exposes BTCUSD / ETHUSD perpetuals out of the box.
-When BTCUSD is selected the chart title is **"Bitcoin Heartbeat"**.
-The accent colour is `#00897B` (SWTS teal).
+By default the app shows BTCUSD and ETHUSD perpetuals. When BTCUSD is
+selected the chart title becomes **"Bitcoin Heartbeat"**. The accent
+colour is `#00897B` (SWTS teal).
 
 ---
 
 ## Layout
 
 ```
-backend/        FastAPI + socket.io fan-out
+backend/        FastAPI + Socket.IO
   app/
-    delta/     Delta REST + WS client, message parser
-    state/    Order book, trade buffer, rolling VWAP
-    sockets/  socket.io server + publish helpers
-    api/      REST routes (products, candle history)
+    delta/     Delta REST + WebSocket client, message parser
+    state/     Order book, trade buffer, rolling VWAP
+    sockets/   Socket.IO server + send helpers
+    api/       REST routes (symbols, candle history)
 frontend/      Next.js 14 app router
-  app/        Routes
-  components/ Chart, OrderBook, TradeTape, Metrics, Header
-  lib/        Socket client, formatters, types
+  app/         Routes
+  components/  Chart, OrderBook, TradeTape, Metrics, Header
+  lib/         Socket client, formatters, types
 tests/         Playwright smoke tests
 ```
 
-Files are kept short on purpose — one responsibility each.
+Files are kept short on purpose — one job each.
 
 ---
 
@@ -50,6 +49,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
+Requires Python 3.10 or newer.
+
 ### Frontend
 
 ```bash
@@ -63,8 +64,8 @@ npm run dev          # http://localhost:3000
 | Name              | Default                              | Notes                       |
 | ----------------- | ------------------------------------ | --------------------------- |
 | `DELTA_REST_URL`  | `https://api.india.delta.exchange`   | Delta REST base             |
-| `DELTA_WS_URL`    | `wss://socket.india.delta.exchange`  | Delta public WS             |
-| `SYMBOLS`         | `BTCUSD,ETHUSD`                      | CSV of perpetuals           |
+| `DELTA_WS_URL`    | `wss://socket.india.delta.exchange`  | Delta public WebSocket      |
+| `SYMBOLS`         | `BTCUSD,ETHUSD`                      | Comma list of perpetuals    |
 | `ALLOWED_ORIGIN`  | `http://localhost:3000`              | CORS for Socket.IO          |
 
 Front-end reads `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8000`).
@@ -80,26 +81,27 @@ npx playwright install --with-deps chromium
 npx playwright test
 ```
 
-Smoke tests assert the page loads, the SWTS header is rendered, the
-"May the spread be tight" tooltip exists and BTCUSD renders the
+The smoke tests check that the page loads, the SWTS header shows up, the
+"May the spread be tight" tooltip is there, and BTCUSD shows the
 "Bitcoin Heartbeat" title.
 
 ---
 
 ## Trade-offs (honest)
 
-- **VWAP server-side.** Single source of truth for every client; small
-  amount of state on the backend in exchange.
-- **L2 ladder capped at ±15 levels.** More than enough to read the book
-  at a glance; keeps the DOM cheap.
-- **In-memory only.** No Postgres, no Redis. A restart means a fresh
-  book and an empty tape — that is fine for an evaluation app.
-- **One ingestor per process.** Horizontal scaling would need a Redis
-  Socket.IO adapter and a shared book store; out of scope here.
-- **Sequence handling.** The parser tracks `sequence_no` from Delta's
-  L2 stream. On a gap the book is dropped and the next snapshot
-  re-seeds it; we never quietly serve a stale book.
-- **Reconnect.** Exponential backoff (1s → 30s) plus a 30s heartbeat
-  watchdog. Re-subscribes from scratch on reconnect.
+- **VWAP is computed on the backend.** That way every client sees the
+  same number; the backend keeps a small amount of extra state.
+- **The ladder shows up to 15 levels each side.** Enough to read the
+  book at a glance, and keeps the page light.
+- **In-memory only.** No database. Restarting the backend means a fresh
+  book and an empty tape — fine for an evaluation app.
+- **One backend process.** Running more than one would need a shared
+  store (Redis or similar). Not done here.
+- **Sequence handling.** The backend tracks Delta's `sequence_no` on the
+  order book. If a number is skipped the book is dropped and the next
+  snapshot fills it back in — we never quietly show a stale book.
+- **Reconnect.** The WebSocket retries with growing delays (1s → 30s)
+  and a 30-second timeout if no message arrives. After a reconnect it
+  re-subscribes from scratch.
 
 A short screen recording goes in `RECORDING.md`.
