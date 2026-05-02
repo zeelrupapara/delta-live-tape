@@ -42,43 +42,73 @@ Files are kept short on purpose — one job each.
 
 ### Backend
 
+Needs Python **3.10 or newer**. On macOS the default `python3` is 3.9,
+so call the newer interpreter explicitly (`python3.11`, `python3.12`,
+`python3.13`, …).
+
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
+cp .env.example .env             # optional, edit if needed
+python3.11 -m venv .venv         # use whichever 3.10+ you have
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Requires Python 3.10 or newer.
-
 ### Frontend
+
+In a second terminal:
 
 ```bash
 cd frontend
+cp .env.example .env.local       # optional, edit if needed
 npm install
-npm run dev          # http://localhost:3000
+npm run dev                      # http://localhost:3000 by default
+```
+
+If port 3000 is busy Next.js will pick the next free port (3001, 3002…).
+In that case set `ALLOWED_ORIGIN` on the backend to match, e.g.:
+
+```bash
+ALLOWED_ORIGIN=http://localhost:3001 uvicorn app.main:app --reload --port 8000
 ```
 
 ### Env vars
+
+Backend (`backend/.env.example`):
 
 | Name              | Default                              | Notes                       |
 | ----------------- | ------------------------------------ | --------------------------- |
 | `DELTA_REST_URL`  | `https://api.india.delta.exchange`   | Delta REST base             |
 | `DELTA_WS_URL`    | `wss://socket.india.delta.exchange`  | Delta public WebSocket      |
 | `SYMBOLS`         | `BTCUSD,ETHUSD`                      | Comma list of perpetuals    |
-| `ALLOWED_ORIGIN`  | `http://localhost:3000`              | CORS for Socket.IO          |
+| `ALLOWED_ORIGIN`  | `http://localhost:3000`              | Must match the frontend URL |
 
-Front-end reads `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8000`).
+Frontend (`frontend/.env.example`):
+
+| Name                       | Default                  | Notes                       |
+| -------------------------- | ------------------------ | --------------------------- |
+| `NEXT_PUBLIC_BACKEND_URL`  | `http://localhost:8000`  | Where the backend is served |
 
 ---
 
 ## QA
+
+The Playwright tests drive a real browser against the running app, so
+**both** the backend and the frontend need to be up first (see Setup
+above). Then, in a third terminal:
 
 ```bash
 cd tests
 npm install
 npx playwright install --with-deps chromium
 npx playwright test
+```
+
+If the frontend is on a port other than 3000, point the tests at it:
+
+```bash
+FRONTEND_URL=http://localhost:3001 npx playwright test
 ```
 
 The smoke tests check that the page loads, the SWTS header shows up, the
