@@ -2,8 +2,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    delta_rest_url: str = "https://api.delta.exchange"
-    delta_ws_url: str = "wss://socket.delta.exchange"
+    delta_rest_url: str = "https://api.india.delta.exchange"
+    delta_ws_url: str = "wss://socket.india.delta.exchange"
     symbols: str = "BTCUSD,ETHUSD"
     allowed_origin: str = "http://localhost:3000"
 

@@ -62,8 +62,8 @@ npm run dev          # http://localhost:3000
 
 | Name              | Default                              | Notes                       |
 | ----------------- | ------------------------------------ | --------------------------- |
-| `DELTA_REST_URL`  | `https://api.delta.exchange`         | Delta REST base             |
-| `DELTA_WS_URL`    | `wss://socket.delta.exchange`        | Delta public WS             |
+| `DELTA_REST_URL`  | `https://api.india.delta.exchange`   | Delta REST base             |
+| `DELTA_WS_URL`    | `wss://socket.india.delta.exchange`  | Delta public WS             |
 | `SYMBOLS`         | `BTCUSD,ETHUSD`                      | CSV of perpetuals           |
 | `ALLOWED_ORIGIN`  | `http://localhost:3000`              | CORS for Socket.IO          |
 
